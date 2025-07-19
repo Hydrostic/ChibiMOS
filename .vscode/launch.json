@@ -1,0 +1,37 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        // {
+        //     "type": "cppdbg",
+        //     "request": "launch",
+        //     "name": "Attach to gdbserver",
+        //     "program": "${workspaceFolder}/target/riscv64gc-unknown-none-elf/release/os",
+        //     "miDebuggerServerAddress": "localhost:1234",
+        //     "miDebuggerPath": "/opt/gdb-14.2-riscv64/bin/riscv64-unknown-elf-gdb",
+        //     "cwd": "${workspaceRoot}",
+        //     // "preLaunchTask": "make-run"
+        // }
+        {
+            "type": "lldb",
+            "request": "launch",
+            "processCreateCommands": [
+                "gdb-remote localhost:1234",
+                // "c"
+            ],
+            "name": "Attach to QEMU(lldb)",
+            "program": "${workspaceFolder}/os/target/riscv64gc-unknown-none-elf/debug/os",
+            "initCommands": [ // 根据是否需要对 main 前的 asm debug 决定
+                "process handle SIGTRAP -s false"
+            ],
+        },{
+            "type": "lldb",
+            "request": "launch",
+            "processCreateCommands": [
+                "gdb-remote localhost:1234",
+                // "c"
+            ],
+            "name": "Attach to QEMU(lldb)/User application",
+            "program": "${workspaceFolder}/os/target/riscv64gc-unknown-none-elf/debug/os"
+        }
+    ]
+}

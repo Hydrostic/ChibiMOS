@@ -1,0 +1,17 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "make-run",
+      "type": "shell",
+      "command": "make",
+      "args": ["run"],
+      "problemMatcher": [],
+      
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    }
+  ]
+}
