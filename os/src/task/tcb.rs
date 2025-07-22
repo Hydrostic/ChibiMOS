@@ -1,6 +1,6 @@
 use crate::mm::address::{self, PhysPageNumber, TRAP_CONTEXT};
 use crate::mm::memory_structure::{self, MemoryArea, MemoryAreaPermissions, MemoryAreaType, MemorySet, MemoryStructureError};
-use crate::mm::KERNEL_MEMORY_SET;
+use crate::mm::kernel::KERNEL_MEMORY_MANAGER;
 use crate::trap::context::TrapContext;
 use crate::trap::{trap_handler, trap_return};
 use super::context::TaskContext;
@@ -24,19 +24,11 @@ impl TaskControlBlock{
         let task_cx_ppn = memory_set.translate(TRAP_CONTEXT.into())?;
 
         let kernel_stack_range = address::kernel_stack_position(app_id);
-        let mut kms_ref = KERNEL_MEMORY_SET.exclusive_access();
-        let kms_ref = kms_ref.as_mut().unwrap();
-        kms_ref.push(
-            MemoryArea::new(kernel_stack_range.start,
-                kernel_stack_range.end,
-                MemoryAreaType::Framed,
-                MemoryAreaPermissions::R | MemoryAreaPermissions::W
-            )?, None
-        )?;
+        KERNEL_MEMORY_MANAGER.exclusive_access().map_stack_for_process_syscall(app_id)?;
         *task_cx_ppn.get_mut::<TrapContext>() = TrapContext::app_init_context(
             entry, 
             user_sp, 
-            kms_ref.token(),
+            KERNEL_MEMORY_MANAGER.exclusive_access().token(),
             kernel_stack_range.end.into(),
             trap_handler as usize
         );

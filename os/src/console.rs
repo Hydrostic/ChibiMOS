@@ -1,4 +1,7 @@
 use core::fmt::{self, Write};
+use core::slice;
+use log::error;
+use crate::mm::kernel::KERNEL_MEMORY_MANAGER;
 use crate::sbi;
 #[macro_export]
 macro_rules! print {
@@ -19,7 +22,19 @@ pub struct Stdout;
 
 impl fmt::Write for Stdout{
     fn write_str(&mut self, s: &str) -> fmt::Result {
-        sbi::putstr(s);
+        let km = KERNEL_MEMORY_MANAGER.exclusive_access();
+        if km.is_identical_address(s.as_ptr() as usize) {
+            sbi::putstr(s);
+        } else {
+            match km.translate_byte_buffer(s.as_ptr(), s.len()){
+                Err(e) => {
+                    sbi::putstr("\u{25A1}")
+                },
+                Ok(addr_iter) => addr_iter.for_each(|(addr, len)| sbi::putstr(unsafe{
+                    str::from_utf8_unchecked(slice::from_raw_parts(Into::<usize>::into(addr) as *const u8, len))
+                }))
+            };
+        }
         Ok(())
     }
 }

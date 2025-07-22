@@ -16,7 +16,9 @@ pub enum MemoryAreaType {
     Identical,
     Framed
 }
-
+unsafe extern{
+    fn strampoline();
+}
 bitflags! {
     #[derive(Clone, Copy)]
     pub struct MemoryAreaPermissions: u8 {
@@ -125,19 +127,6 @@ impl MemoryArea {
 
 }
 
-#[allow(dead_code)]
-unsafe extern "C" {
-    fn stext();
-    fn etext();
-    fn srodata();
-    fn erodata();
-    fn sdata();
-    fn edata();
-    fn sbss_with_stack();
-    fn ebss();
-    fn ekernel();
-    fn strampoline();
-}
 pub struct AddressIterator<'a>{
     start_va: VirtAddr,
     end_va: VirtAddr,
@@ -253,36 +242,6 @@ impl MemorySet {
 }
 
 
-pub fn new_kernel_memory_set(start: usize, end: usize) -> MemorySet{
-    let mut set = MemorySet::new().expect("[MM] Failed to create kernel memory set");
-
-    set.map_trampoline().expect("Failed to map trampoline");
-    debug!("[MM] Kernel segment .text [{:#x}, {:#x})", stext as usize, etext as usize);
-    debug!("[MM] Kernel segment .rodata [{:#x}, {:#x})", srodata as usize, erodata as usize);
-    debug!("[MM] Kernel segment .data [{:#x}, {:#x})", sdata as usize, edata as usize);
-    debug!("[MM] Kernel segment .bss(include stack) [{:#x}, {:#x})", sbss_with_stack as usize, ebss as usize);
-
-    set.push(MemoryArea::new((stext as usize).into(), (etext as usize).into(), 
-        MemoryAreaType::Identical, 
-        MemoryAreaPermissions::R | MemoryAreaPermissions::X).unwrap(), None).expect("[MM] Failed to push .text area");
-
-    set.push(MemoryArea::new((srodata as usize).into(), (erodata as usize).into(), 
-        MemoryAreaType::Identical, 
-        MemoryAreaPermissions::R).unwrap(), None).expect("[MM] Failed to push .rodata area");
-    
-    set.push(MemoryArea::new((sdata as usize).into(), (edata as usize).into(), 
-        MemoryAreaType::Identical, 
-        MemoryAreaPermissions::R | MemoryAreaPermissions::W).unwrap(), None).expect("[MM] Failed to push .data area");
-    
-    set.push(MemoryArea::new((sbss_with_stack as usize).into(), (ebss as usize).into(), 
-        MemoryAreaType::Identical, 
-        MemoryAreaPermissions::R | MemoryAreaPermissions::W).unwrap(), None).expect("[MM] Failed to push .bss area");
-
-    set.push(MemoryArea::new((ekernel as usize).into(), end.into(), 
-        MemoryAreaType::Identical, 
-        MemoryAreaPermissions::R | MemoryAreaPermissions::W).unwrap(), None).expect("[MM] Failed to push left area");
-    set
-}
 
 pub fn new_elf_memory_set(process_index: usize, elf_raw: &[u8]) -> Result<(MemorySet, usize, usize), MemoryStructureError> {
     log::debug!("[MM] Initializing ELF memory set for process {}", process_index);
